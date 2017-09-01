@@ -31,36 +31,67 @@ export default class Box extends Component{
         };
     }
 
-    updateTalkList(obj){
-        if(obj.dir === 'left') {
+    updateTalkList(obj,ifupdate){ // 同步更新TalkList
+        let talkList = this.state.talkList;
 
-            let talkList = this.state.talkList;
-            talkList.push(Object.assign({}, {type: 'loading', dir: 'left'}));
-            this.setState({talkList});
-            onfire.fire('reScroll');
-
-            setTimeout(() => {
-                if (TestImg.test(obj.content)) {
-                    obj.content = obj.content.replace('img:', '');
-                    talkList[talkList.length - 1] = Object.assign({}, obj, {type: 'image'});
-                } else {
-                    talkList[talkList.length - 1] = Object.assign({}, obj, {type: 'text'});
-                }
-                this.setState({talkList});
-                onfire.fire('reScroll');
-            }, 500);
-        }
-
-        else {
-            let talkList = this.state.talkList;
-            if (TestImg.test(obj.content)) {
+        if(!ifupdate) {
+            if (obj.type === 'loading') {
+                talkList.push(Object.assign({}, obj));
+            } else if (TestImg.test(obj.content) || obj.type === 'image') {
                 obj.content = obj.content.replace('img:', '');
                 talkList.push(Object.assign({}, obj, {type: 'image'}));
             } else {
                 talkList.push(Object.assign({}, obj, {type: 'text'}));
             }
-            this.setState({talkList});
-            onfire.fire('reScroll');
+        } else {
+            if (TestImg.test(obj.content)) {
+                obj.content = obj.content.replace('img:', '');
+                talkList[talkList.length - 1] = Object.assign({}, obj, {type: 'image'});
+            } else {
+                talkList[talkList.length - 1] = Object.assign({}, obj, {type: 'text'});
+            }
+        }
+
+        this.setState({talkList});
+        onfire.fire('reScroll');
+    }
+
+    // 目前的这种写法真是太糟糕了
+    updateTalkListAsync(obj){ // 异步更新TalkList
+        if(obj.dir === 'left') {
+
+            this.updateTalkList(Object.assign({}, {type: 'loading', dir: 'left'}));
+
+            // let talkList = this.state.talkList;
+            // talkList.push(Object.assign({}, {type: 'loading', dir: 'left'}));
+            // this.setState({talkList});
+            // onfire.fire('reScroll');
+
+            setTimeout(() => {
+                this.updateTalkList(obj,true);
+                // if (TestImg.test(obj.content)) {
+                //     obj.content = obj.content.replace('img:', '');
+                //     talkList[talkList.length - 1] = Object.assign({}, obj, {type: 'image'});
+                // } else {
+                //     talkList[talkList.length - 1] = Object.assign({}, obj, {type: 'text'});
+                // }
+                // this.setState({talkList});
+                // onfire.fire('reScroll');
+            }, 500);
+        }
+
+        else {
+            this.updateTalkList(obj,false);
+
+            // let talkList = this.state.talkList;
+            // if (TestImg.test(obj.content)) {
+            //     obj.content = obj.content.replace('img:', '');
+            //     talkList.push(Object.assign({}, obj, {type: 'image'}));
+            // } else {
+            //     talkList.push(Object.assign({}, obj, {type: 'text'}));
+            // }
+            // this.setState({talkList});
+            // onfire.fire('reScroll');
         }
 
     }
@@ -87,7 +118,7 @@ export default class Box extends Component{
         });
         onfire.on('getNext', (circleId,content) => {
             console.log(this);
-            this.updateTalkList({
+            this.updateTalkListAsync({
                 circleId:circleId,
                 dir: 'right',
                 content: content
@@ -97,7 +128,24 @@ export default class Box extends Component{
                 content
             };
             console.log('getNext');
-            fetch(`${preURL}/message`,{
+
+            let minLoading = new Promise((resolve,reject) => {
+
+                setTimeout(()=>{
+                    this.updateTalkList(Object.assign({}, {type: 'loading', dir: 'left'}));
+                },200);
+
+                // let talkList = this.state.talkList;
+                // talkList.push(Object.assign({}, {type: 'loading', dir: 'left'}));
+                // this.setState({talkList});
+                // onfire.fire('reScroll');
+
+                setTimeout(()=>{
+                    resolve(0);
+                },600)
+            });
+
+            let dataFetch = fetch(`${preURL}/message`,{
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json"
@@ -105,25 +153,47 @@ export default class Box extends Component{
                 body:JSON.stringify(rawBody)
             }).then((response) => {
                 return response.json();
-            }).then((response) => {
+            });
+
+            Promise.all([minLoading,dataFetch]).then(([loading,response])=>{
+
                 console.log(response);
                 if(response.exist){
                     let contents = response.result.content.split("||");
                     let reply = [];
                     let i = 0;
                     let that = this;
-                    function updateTalk(){
-                        if(i<contents.length){
-                            that.updateTalkList({
-                                circleId:response.result.circleId,
-                                dir: 'left',
-                                content: contents[i]
-                            });
-                            i++;
-                            setTimeout(updateTalk,500);
+
+                    this.updateTalkList( Object.assign({}, {content:contents[0], dir: 'left'}),true);
+
+                    // let talkList = this.state.talkList;
+                    // if (TestImg.test(contents[0].content)) {
+                    //     contents[0].content = contents[0].content.replace('img:', '');
+                    //     talkList[talkList.length - 1] = Object.assign({}, {content:contents[0], dir: 'left',}, {type: 'image'});
+                    // } else {
+                    //     talkList[talkList.length - 1] = Object.assign({}, {content:contents[0], dir: 'left',}, {type: 'text'});
+                    // }
+                    // this.setState({talkList});
+                    // onfire.fire('reScroll');
+
+                    contents.shift();
+
+                    if(contents.length) {
+                        function updateTalk() {
+                            if (i < contents.length) {
+                                that.updateTalkListAsync({
+                                    circleId: response.result.circleId,
+                                    dir: 'left',
+                                    content: contents[i]
+                                });
+                                i++;
+                                setTimeout(updateTalk, 500);
+                            }
                         }
+
+                        setTimeout(updateTalk, 500);
                     }
-                    setTimeout(updateTalk,500);
+
                     let replys = response.result.reply.split("||");
                     if(replys.length) {
                         for (let i = 0; i < replys.length; i++) {
@@ -137,15 +207,25 @@ export default class Box extends Component{
                     }
                 }
                 else{
-                    setTimeout(()=>{
-                        this.updateTalkList({
-                            circleId:101,
-                            dir: 'left',
-                            content: "对不起，这样的语言我还没办法处理"
-                        });
-                    },500);
+
+                    this.updateTalkList({
+                        circleId:101,
+                        dir: 'left',
+                        content: "对不起，这样的语言我还没办法处理"
+                    });
+
+                    // let talkList = this.state.talkList;
+                    // talkList.push({
+                    //     circleId:101,
+                    //     dir: 'left',
+                    //     content: "对不起，这样的语言我还没办法处理"
+                    // });
+                    // this.setState({talkList});
+                    // onfire.fire('reScroll');
+
                 }
             });
+
         });
     }
 
