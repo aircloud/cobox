@@ -1,0 +1,144 @@
+@import (reference) '../theme/QuiteCyan.less';
+
+.cobox-main{
+  display: flex;
+  flex:auto;
+  background: @lightBackground;
+  flex-direction: column;
+  padding-bottom: 10px;
+  padding-top: 10px;
+  overflow-y: scroll;
+  &::-webkit-scrollbar{
+    width:8px
+  }
+  &::-webkit-scrollbar-thumb{
+    background-color:#bdf4eb;
+    -webkit-border-radius:4px;
+    border-radius:4px
+  }
+}
+.msg-row{
+  height: max-content;
+  height: -webkit-max-content;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-bottom: 10px;
+}
+.msg-bounce-in-left {
+  -webkit-transform-origin: 0 0;
+  -ms-transform-origin: 0 0;
+  transform-origin: 0 0;
+  -webkit-animation: msgBounceIn .4s;
+  animation: msgBounceIn .4s;
+}
+.msg-bounce-in-right {
+  -webkit-transform-origin: 100% 100%;
+  -ms-transform-origin: 100% 100%;
+  transform-origin: 100% 100%;
+  -webkit-animation: msgBounceIn .4s;
+  animation: msgBounceIn .4s;
+}
+
+.msg {
+  display: inline-block;
+  padding: 9px 14px;
+  max-width: 65%;
+  overflow: hidden;
+  word-wrap: break-word;
+  font-size: 14px;
+  line-height: 24px;
+  background: white;
+  -webkit-box-shadow: 5px 5px 15px 0 rgba(102,102,102,0.1);
+  box-shadow: 5px 5px 15px 0 rgba(102,102,102,0.1);
+  -webkit-transition: width .12s ease-out, height .12s ease-out;
+  transition: width .12s ease-out, height .12s ease-out;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  img{
+    width: 200px;
+    border-radius: 5px;
+  }
+}
+.msg-right{
+  width: max-content;
+  height: max-content;
+  width: -webkit-max-content;
+  height: -webkit-max-content;
+  border-radius: 20px 0 20px 20px;
+  float: right;
+  color: white;
+  -webkit-box-shadow: 5px 5px 15px 0 rgba(102,102,102,0.15);
+  box-shadow: 5px 5px 15px 0 rgba(102,102,102,0.15);
+  background: -webkit-linear-gradient(70deg, #3FD1E1 0%, #44D7CD 100%);
+  background: linear-gradient(20deg, #3FD1E1 0%, #44D7CD 100%);
+}
+.msg-left{
+  width: max-content;
+  width: -webkit-max-content;
+  height:max-content;
+  height:-webkit-max-content;
+  border-radius: 0 20px 20px 20px;
+  display: block;
+}
+
+@keyframes msgBounceIn {
+  0%, 100% {
+    -webkit-animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+  }
+  0% {
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+  40% {
+    -webkit-transform: scale(1.03);
+    transform: scale(1.03);
+  }
+  75% {
+    -webkit-transform: scale(0.98);
+    transform: scale(0.98);
+  }
+  100% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+
+@-webkit-keyframes load-animation{
+  50%{
+    transform:scale(0.4);
+    opacity: 0.3;
+  }
+  100%{
+    transform:scale(1);
+    opacity: 1;
+  }
+}
+
+// 聊天loading动画
+.loading{
+  position: relative;
+  width: 60px;
+  height: 15px;
+  background: transparent;
+}
+.loading i{
+  display: block;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background-color: #bdf4eb;
+  position: absolute;
+}
+.loading i:nth-child(1){
+  left: 4px;
+  -webkit-animation:load-animation 1s ease 0s infinite;
+}
+.loading i:nth-child(2){
+  left: 20px;
+  -webkit-animation:load-animation 1s ease -0.12s infinite;
+}
+.loading i:nth-child(3){
+  left: 36px;
+  -webkit-animation:load-animation 1s ease -0.24s infinite;
+}
