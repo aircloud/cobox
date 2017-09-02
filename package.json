@@ -16,6 +16,7 @@
     "less": "^2.7.2",
     "onfire.js": "^1.0.6",
     "preact": "^8.2.1",
+    "rxjs": "^5.4.3",
     "whatwg-fetch": "^2.0.3"
   },
   "devDependencies": {

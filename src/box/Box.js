@@ -23,6 +23,10 @@ const TestImg = /^img.*?/;
 export default class Box extends Component{
     constructor(props){
         super(props);
+
+        this.updating = false;
+        // 通过添加这个状态，可以使得在用户输入频率过高时及时截断系统输入
+
         this.state = {
             talkList : [],
             reply: [],
@@ -30,10 +34,19 @@ export default class Box extends Component{
             beginReply:["你好，你能简单的介绍一下自己吗？", "啊，我只是不小心点进来的"],
         };
     }
+    //
+    // // 只要调用这个了,就是不可挽回
+    // addTalkList(obj,ifLoading){
+    //     if(ifLoading){
+    //         // 先loading一会
+    //
+    //     }
+    //
+    // }
+    //
 
     updateTalkList(obj,ifupdate){ // 同步更新TalkList
         let talkList = this.state.talkList;
-
         if(!ifupdate) {
             if (obj.type === 'loading') {
                 talkList.push(Object.assign({}, obj));
@@ -51,49 +64,20 @@ export default class Box extends Component{
                 talkList[talkList.length - 1] = Object.assign({}, obj, {type: 'text'});
             }
         }
-
         this.setState({talkList});
         onfire.fire('reScroll');
     }
 
-    // 目前的这种写法真是太糟糕了
+    // 初步更新了写法，但是感觉仍然麻烦
     updateTalkListAsync(obj){ // 异步更新TalkList
         if(obj.dir === 'left') {
-
             this.updateTalkList(Object.assign({}, {type: 'loading', dir: 'left'}));
-
-            // let talkList = this.state.talkList;
-            // talkList.push(Object.assign({}, {type: 'loading', dir: 'left'}));
-            // this.setState({talkList});
-            // onfire.fire('reScroll');
-
             setTimeout(() => {
                 this.updateTalkList(obj,true);
-                // if (TestImg.test(obj.content)) {
-                //     obj.content = obj.content.replace('img:', '');
-                //     talkList[talkList.length - 1] = Object.assign({}, obj, {type: 'image'});
-                // } else {
-                //     talkList[talkList.length - 1] = Object.assign({}, obj, {type: 'text'});
-                // }
-                // this.setState({talkList});
-                // onfire.fire('reScroll');
             }, 500);
-        }
-
-        else {
+        } else {
             this.updateTalkList(obj,false);
-
-            // let talkList = this.state.talkList;
-            // if (TestImg.test(obj.content)) {
-            //     obj.content = obj.content.replace('img:', '');
-            //     talkList.push(Object.assign({}, obj, {type: 'image'}));
-            // } else {
-            //     talkList.push(Object.assign({}, obj, {type: 'text'}));
-            // }
-            // this.setState({talkList});
-            // onfire.fire('reScroll');
         }
-
     }
 
     componentDidMount() {
@@ -117,7 +101,7 @@ export default class Box extends Component{
             talkList,reply
         });
         onfire.on('getNext', (circleId,content) => {
-            console.log(this);
+            this.updating = false;
             this.updateTalkListAsync({
                 circleId:circleId,
                 dir: 'right',
@@ -135,11 +119,6 @@ export default class Box extends Component{
                     this.updateTalkList(Object.assign({}, {type: 'loading', dir: 'left'}));
                 },200);
 
-                // let talkList = this.state.talkList;
-                // talkList.push(Object.assign({}, {type: 'loading', dir: 'left'}));
-                // this.setState({talkList});
-                // onfire.fire('reScroll');
-
                 setTimeout(()=>{
                     resolve(0);
                 },600)
@@ -155,8 +134,9 @@ export default class Box extends Component{
                 return response.json();
             });
 
+            // 这个里面实际上是一个流式的数据控制与处理,虽然不够优雅,但是能解决问题
             Promise.all([minLoading,dataFetch]).then(([loading,response])=>{
-
+                this.updating = true;
                 console.log(response);
                 if(response.exist){
                     let contents = response.result.content.split("||");
@@ -166,31 +146,24 @@ export default class Box extends Component{
 
                     this.updateTalkList( Object.assign({}, {content:contents[0], dir: 'left'}),true);
 
-                    // let talkList = this.state.talkList;
-                    // if (TestImg.test(contents[0].content)) {
-                    //     contents[0].content = contents[0].content.replace('img:', '');
-                    //     talkList[talkList.length - 1] = Object.assign({}, {content:contents[0], dir: 'left',}, {type: 'image'});
-                    // } else {
-                    //     talkList[talkList.length - 1] = Object.assign({}, {content:contents[0], dir: 'left',}, {type: 'text'});
-                    // }
-                    // this.setState({talkList});
-                    // onfire.fire('reScroll');
-
                     contents.shift();
 
                     if(contents.length) {
                         function updateTalk() {
                             if (i < contents.length) {
-                                that.updateTalkListAsync({
-                                    circleId: response.result.circleId,
-                                    dir: 'left',
-                                    content: contents[i]
-                                });
-                                i++;
-                                setTimeout(updateTalk, 500);
+                                if(that.updating) {
+                                    that.updateTalkListAsync({
+                                        circleId: response.result.circleId,
+                                        dir: 'left',
+                                        content: contents[i]
+                                    });
+                                    i++;
+                                    setTimeout(updateTalk, 500);
+                                } else {
+                                    return 0;
+                                }
                             }
                         }
-
                         setTimeout(updateTalk, 500);
                     }
 
@@ -207,22 +180,11 @@ export default class Box extends Component{
                     }
                 }
                 else{
-
                     this.updateTalkList({
                         circleId:101,
                         dir: 'left',
                         content: "对不起，这样的语言我还没办法处理"
-                    });
-
-                    // let talkList = this.state.talkList;
-                    // talkList.push({
-                    //     circleId:101,
-                    //     dir: 'left',
-                    //     content: "对不起，这样的语言我还没办法处理"
-                    // });
-                    // this.setState({talkList});
-                    // onfire.fire('reScroll');
-
+                    },true);
                 }
             });
 
